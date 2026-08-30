@@ -1,0 +1,322 @@
+<Window x:Class="Slate.Notch.NotchWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Slate"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="{x:Null}"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        ResizeMode="NoResize"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display">
+
+    <!-- Root has no background on purpose: everything outside the panel is click-through,
+         enforced properly in WM_NCHITTEST. -->
+    <Grid x:Name="Root" Background="{x:Null}">
+
+        <!-- The bloom, behind the panel and free to spill past it. -->
+        <Border x:Name="Glow"
+                VerticalAlignment="Top" HorizontalAlignment="Center"
+                CornerRadius="0,0,30,30"
+                Opacity="0"
+                IsHitTestVisible="False">
+            <Border.Background>
+                <SolidColorBrush x:Name="GlowBrush" Color="Black"/>
+            </Border.Background>
+            <Border.Effect>
+                <BlurEffect Radius="26"/>
+            </Border.Effect>
+        </Border>
+
+        <Border x:Name="Panel"
+                VerticalAlignment="Top" HorizontalAlignment="Center"
+                Background="Black"
+                CornerRadius="0,0,10,10"
+                AllowDrop="True"
+                ClipToBounds="True">
+
+          <Grid>
+            <!-- The record's own colour, blurred to a wash. OpacityMask is applied to
+                 this Border, which is exactly panel-sized, so the transparent top of the
+                 gradient lands on the header band rather than somewhere off-screen. -->
+            <Border x:Name="ArtworkWash" ClipToBounds="True">
+                <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="Transparent" Offset="0"/>
+                        <GradientStop Color="Transparent" Offset="0.16"/>
+                        <GradientStop Color="White" Offset="0.32"/>
+                    </LinearGradientBrush>
+                </Border.OpacityMask>
+                <Image x:Name="WashImage" Stretch="UniformToFill" Opacity="0.28">
+                    <Image.Effect>
+                        <BlurEffect Radius="44"/>
+                    </Image.Effect>
+                </Image>
+            </Border>
+
+            <Grid x:Name="PanelContent" Opacity="0" ClipToBounds="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition x:Name="HeaderRow" Height="34"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header. Three fixed regions rather than a spacer, so the middle band
+                     stays put no matter how wide the tabs get. On a Mac that band hides
+                     the camera; here it keeps the layout identical between the two. -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="LeftRegion" Width="*"/>
+                        <ColumnDefinition x:Name="CentreBand" Width="0"/>
+                        <ColumnDefinition x:Name="RightRegion" Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                VerticalAlignment="Center" Margin="12,0,0,0">
+                        <Border x:Name="TabNow" Style="{StaticResource TabPill}" Margin="0,0,4,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="TabNowIcon" FontFamily="{StaticResource IconFont}"
+                                           Text="&#xE8D6;" FontSize="10" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TabNowLabel" Text="Now Playing" FontSize="11"
+                                           Margin="4,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border x:Name="TabShelf" Style="{StaticResource TabPill}" Margin="0,0,4,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="TabShelfIcon" FontFamily="{StaticResource IconFont}"
+                                           Text="&#xE7B8;" FontSize="10" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TabShelfLabel" Text="Shelf" FontSize="11"
+                                           Margin="4,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border x:Name="TabClip" Style="{StaticResource TabPill}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="TabClipIcon" FontFamily="{StaticResource IconFont}"
+                                           Text="&#xE8C8;" FontSize="10" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TabClipLabel" Text="Clipboard" FontSize="11"
+                                           Margin="4,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Margin="0,0,12,0">
+                        <Border x:Name="ShelfBadge" CornerRadius="9" Padding="6,2" Margin="0,0,6,0"
+                                Visibility="Collapsed">
+                            <Border.Background>
+                                <SolidColorBrush x:Name="BadgeBrush" Color="#59FFFFFF"/>
+                            </Border.Background>
+                            <TextBlock x:Name="ShelfBadgeText" FontSize="10" FontWeight="Bold"
+                                       Foreground="White"/>
+                        </Border>
+                        <Border x:Name="CloseButton" Style="{StaticResource RoundIcon}"
+                                Width="26" Height="26">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE711;"
+                                       FontSize="10" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Content -->
+                <Grid Grid.Row="1" Margin="16,10,16,12">
+
+                    <!-- Now Playing -->
+                    <Grid x:Name="NowPane">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border x:Name="ArtworkHost" Grid.Column="0" Width="124" Height="124"
+                                CornerRadius="14" Cursor="Hand" VerticalAlignment="Top">
+                            <Border.Background>
+                                <SolidColorBrush x:Name="ArtworkPlaceholder" Color="#33FFFFFF"/>
+                            </Border.Background>
+                            <Grid>
+                                <Image x:Name="ArtworkImage" Stretch="UniformToFill"/>
+                                <Border x:Name="ArtworkHoverVeil" Background="#80000000"
+                                        CornerRadius="14" Visibility="Collapsed">
+                                    <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE8A7;"
+                                               FontSize="22" Foreground="White"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                            <TextBlock x:Name="SourceLabel" FontSize="9" FontWeight="Bold"
+                                       Foreground="#73FFFFFF"/>
+                            <TextBlock x:Name="TitleLabel" FontSize="15" FontWeight="SemiBold"
+                                       Foreground="White" TextTrimming="CharacterEllipsis"
+                                       Margin="0,3,0,0"/>
+                            <TextBlock x:Name="ArtistLabel" FontSize="11.5" FontWeight="Medium" Foreground="#8CFFFFFF"
+                                       TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+
+                            <Border x:Name="ScrubTrack" Height="4" CornerRadius="2"
+                                    Background="#24FFFFFF" Margin="0,14,0,0" Cursor="Hand">
+                                <Border x:Name="ScrubFill" HorizontalAlignment="Left" CornerRadius="2">
+                                    <Border.Background>
+                                        <SolidColorBrush x:Name="ScrubBrush" Color="#6B8FFF"/>
+                                    </Border.Background>
+                                </Border>
+                            </Border>
+
+                            <Grid Margin="0,4,0,0">
+                                <TextBlock x:Name="ElapsedLabel" FontSize="9" Foreground="#66FFFFFF"
+                                           HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="DurationLabel" FontSize="9" Foreground="#66FFFFFF"
+                                           HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid Margin="0,6,0,0">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                    <Border x:Name="PrevButton" Style="{StaticResource RoundIcon}"
+                                            Width="44" Height="44">
+                                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE892;"
+                                                   FontSize="13" Foreground="White"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="PlayButton" Style="{StaticResource RoundIcon}"
+                                            Width="48" Height="48" Background="#1AFFFFFF">
+                                        <TextBlock x:Name="PlayGlyph" FontFamily="{StaticResource IconFont}"
+                                                   Text="&#xE768;" FontSize="15" Foreground="White"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="NextButton" Style="{StaticResource RoundIcon}"
+                                            Width="44" Height="44">
+                                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE893;"
+                                                   FontSize="13" Foreground="White"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel x:Name="VolumeRow" Orientation="Horizontal"
+                                            HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Border x:Name="VolumeButton" Style="{StaticResource RoundIcon}"
+                                            Width="28" Height="28">
+                                        <TextBlock x:Name="VolumeGlyph"
+                                                   FontFamily="{StaticResource IconFont}" Text="&#xE995;"
+                                                   FontSize="11" Foreground="White"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <!-- A 4pt track you can see inside a 20pt one you can hit. -->
+                                    <Border x:Name="VolumeHit" Width="72" Height="20"
+                                            Background="Transparent" Cursor="Hand"
+                                            Margin="5,0,6,0">
+                                        <Border Height="4" CornerRadius="2" Background="#29FFFFFF"
+                                                VerticalAlignment="Center">
+                                            <Border x:Name="VolumeFill" HorizontalAlignment="Left"
+                                                    CornerRadius="2">
+                                                <Border.Background>
+                                                    <SolidColorBrush x:Name="VolumeBrush" Color="#6B8FFF"/>
+                                                </Border.Background>
+                                            </Border>
+                                        </Border>
+                                    </Border>
+
+                                    <Border x:Name="VolumeTag" CornerRadius="8" Padding="5,2"
+                                            Background="#1AFFFFFF" Cursor="Hand">
+                                        <TextBlock x:Name="VolumeTagText" Text="APP" FontSize="8"
+                                                   FontWeight="Bold" Foreground="#99FFFFFF"/>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel x:Name="NowIdlePane" VerticalAlignment="Center"
+                                HorizontalAlignment="Center" Visibility="Collapsed">
+                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE8D6;" FontSize="26"
+                                   Foreground="#4DFFFFFF" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Nothing is playing" FontSize="12" Foreground="#8CFFFFFF"
+                                   Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Start something in any app with media controls"
+                                   FontSize="10" Foreground="#52FFFFFF"
+                                   Margin="0,3,0,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Shelf -->
+                    <Grid x:Name="ShelfPane" Visibility="Collapsed">
+                        <Border x:Name="ShelfDropZone" CornerRadius="14" BorderThickness="1.5">
+                            <Border.BorderBrush>
+                                <SolidColorBrush x:Name="ShelfDropBrush" Color="#24FFFFFF"/>
+                            </Border.BorderBrush>
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE7B8;"
+                                           FontSize="26" Foreground="#4DFFFFFF"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="ShelfDropTitle" Text="Drop files on the bar"
+                                           FontSize="12" Foreground="#8CFFFFFF"
+                                           Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                                <TextBlock Text="They stay put — Slate keeps a reference, never a copy"
+                                           FontSize="10" Foreground="#52FFFFFF"
+                                           Margin="0,3,0,0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <DockPanel x:Name="ShelfList" Visibility="Collapsed">
+                            <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                                <TextBlock x:Name="ShelfCount" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="#73FFFFFF" HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="ShelfClear" Text="Clear" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#73FFFFFF"
+                                           HorizontalAlignment="Right" Cursor="Hand"/>
+                            </Grid>
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled">
+                                <ItemsControl x:Name="ShelfItems">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Grid>
+
+                    <!-- Clipboard -->
+                    <Grid x:Name="ClipPane" Visibility="Collapsed">
+                        <StackPanel x:Name="ClipEmpty" VerticalAlignment="Center"
+                                    HorizontalAlignment="Center">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE8C8;"
+                                       FontSize="26" Foreground="#4DFFFFFF"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Nothing copied yet" FontSize="12" Foreground="#8CFFFFFF"
+                                       Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                            <TextBlock Text="History stays in memory — quitting Slate clears it"
+                                       FontSize="10" Foreground="#52FFFFFF"
+                                       Margin="0,3,0,0" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <DockPanel x:Name="ClipList" Visibility="Collapsed">
+                            <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                                <TextBlock x:Name="ClipCount" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="#73FFFFFF" HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="ClipClear" Text="Clear" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#73FFFFFF"
+                                           HorizontalAlignment="Right" Cursor="Hand"/>
+                            </Grid>
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled">
+                                <ItemsControl x:Name="ClipItems">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Grid>
+
+                </Grid>
+            </Grid>
+          </Grid>
+        </Border>
+    </Grid>
+</Window>

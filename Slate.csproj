@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- The Windows 10 SDK suffix is what turns on the WinRT projections; without it
+         Windows.Media.Control (the whole reason this port is worth doing) is invisible. -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- Only for System.Windows.Forms.Screen, which is still the least painful way to
+         ask which monitor the cursor is on. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Slate</AssemblyName>
+    <RootNamespace>Slate</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>AnyCPU;x64;ARM64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The Windows volume mixer is COM: IMMDeviceEnumerator, IAudioSessionManager2,
+         ISimpleAudioVolume. Hand-written interop means hand-written vtables, and a
+         vtable in the wrong order is a crash rather than a compile error — a poor bet
+         in code that cannot be run here. NAudio is the mature wrapper for exactly this. -->
+    <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
+
+</Project>
