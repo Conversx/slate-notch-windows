@@ -1,0 +1,91 @@
+# Builds the Windows download.
+#
+# This port was written on a Mac and cannot be built there: `net8.0-windows10.0.19041.0`
+# with `UseWPF` needs the Windows Desktop SDK, which only exists on Windows. A
+# `windows-latest` runner is therefore not a convenience here — it is the only compiler
+# this project has ever had.
+#
+# Push to main to find out whether it compiles. Push a `v*` tag to publish a release.
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      # Both architectures are built even when one fails, so a single run says which
+      # problems are the code's and which are one runtime identifier's.
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore -r ${{ matrix.rid }}
+
+      # Self-contained, so the download runs on a machine with no .NET installed —
+      # the alternative is an app that fails at launch for anyone who has not first
+      # found and installed the Desktop Runtime.
+      #
+      # Not trimmed. WPF resolves types through reflection and XAML, which the trimmer
+      # cannot see, so a trimmed WPF build fails at runtime rather than at publish.
+      - name: Publish
+        run: >
+          dotnet publish Slate.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:PublishTrimmed=false
+          -p:DebugType=none
+          -o publish/${{ matrix.rid }}
+
+      - name: Name the build
+        id: name
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $env:GITHUB_REF -replace '^refs/tags/v', ''
+          } else {
+            "0.0.0+$($env:GITHUB_SHA.Substring(0,7))"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "zip=Slate-$version-windows-${{ matrix.rid }}.zip" >> $env:GITHUB_OUTPUT
+
+      - name: Package
+        shell: pwsh
+        run: Compress-Archive -Path publish/${{ matrix.rid }}/* -DestinationPath ${{ steps.name.outputs.zip }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Slate-${{ matrix.rid }}
+          path: ${{ steps.name.outputs.zip }}
+          if-no-files-found: error
+
+      # Only on a tag. A build of main is a compile check, not a download.
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.name.outputs.zip }}
+          draft: true
+          body: |
+            Built by CI on `windows-latest`. **Compiling is all that has been verified** —
+            see the Untested section in the README before assuming any of it works.

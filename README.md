@@ -8,6 +8,23 @@ see [Untested](#untested) before you judge it.**
 
 ---
 
+## Download
+
+Builds come from CI, because they cannot come from here: this port was written on a Mac,
+and `net8.0-windows10.0.19041.0` with `UseWPF` needs the Windows Desktop SDK, which only
+exists on Windows. `.github/workflows/build.yml` runs on a `windows-latest` runner and is
+the only compiler this project has ever had.
+
+- **[Releases](https://github.com/Conversx/slate-notch-windows/releases)** — a tagged
+  release carries `Slate-<version>-windows-x64.zip` and `-arm64.zip`, self-contained, so
+  they run on a machine with no .NET installed.
+- **[Actions](https://github.com/Conversx/slate-notch-windows/actions)** — every push to
+  `main` builds both architectures and attaches them as artifacts, whether or not a
+  release was cut.
+
+**A green build means it compiles. It does not mean it works** — see
+[Untested](#untested), which is not a formality here.
+
 ## Build and run
 
 Requires the .NET 8 SDK. Inside Windows:
