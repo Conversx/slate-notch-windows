@@ -66,6 +66,8 @@ public partial class NotchWindow : Window
         _clipboard.Attach(this);
         _clickHook = new MouseHook(OnGlobalClick);
 
+        TitleLabel.ApplyTypography(15, FontWeights.SemiBold, Brushes.White);
+
         ApplyPhaseVisuals(NotchPhase.Closed, animate: false);
         RenderMedia();
         RenderVolume();

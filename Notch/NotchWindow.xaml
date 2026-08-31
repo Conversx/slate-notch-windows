@@ -1,6 +1,7 @@
 <Window x:Class="Slate.Notch.NotchWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:slate="clr-namespace:Slate.Support"
         Title="Slate"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -149,9 +150,10 @@
                         <StackPanel Grid.Column="1" Margin="14,0,0,0">
                             <TextBlock x:Name="SourceLabel" FontSize="9" FontWeight="Bold"
                                        Foreground="#73FFFFFF"/>
-                            <TextBlock x:Name="TitleLabel" FontSize="15" FontWeight="SemiBold"
-                                       Foreground="White" TextTrimming="CharacterEllipsis"
-                                       Margin="0,3,0,0"/>
+                            <!-- Scrolls only when the title does not fit; see MarqueeText. -->
+                            <slate:MarqueeText x:Name="TitleLabel" Height="22"
+                                               HorizontalAlignment="Stretch"
+                                               Margin="0,3,0,0"/>
                             <TextBlock x:Name="ArtistLabel" FontSize="11.5" FontWeight="Medium" Foreground="#8CFFFFFF"
                                        TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
 

@@ -60,7 +60,9 @@ public sealed class MediaModel : INotifyPropertyChanged, IDisposable
     public MediaModel()
     {
         _dispatcher = Dispatcher.CurrentDispatcher;
-        _tick = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        // 250ms, not a second. Reading the timeline is an in-process WinRT call, so a
+        // finer tick costs almost nothing and the scrubber moves instead of stepping.
+        _tick = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _tick.Tick += (_, _) => RefreshTimelineOnly();
     }
 
