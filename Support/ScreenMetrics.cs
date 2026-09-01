@@ -1,5 +1,9 @@
 using System.Windows;
-using System.Windows.Forms;
+// Aliased rather than imported wholesale: a plain `using System.Windows.Forms` beside
+// `using System.Windows` makes Point, Size and Application ambiguous in this very file.
+// Two types is all this needs.
+using WinScreen = System.Windows.Forms.Screen;
+using WinControl = System.Windows.Forms.Control;
 
 namespace Slate.Support;
 
@@ -27,13 +31,13 @@ public sealed class NotchMetrics
 
     public static NotchMetrics ForCursorScreen(double dpiScale)
     {
-        var screen = Screen.FromPoint(Control.MousePosition) ?? Screen.PrimaryScreen!;
+        var screen = WinScreen.FromPoint(WinControl.MousePosition) ?? WinScreen.PrimaryScreen!;
         return FromScreen(screen, dpiScale);
     }
 
-    public static NotchMetrics Primary(double dpiScale) => FromScreen(Screen.PrimaryScreen!, dpiScale);
+    public static NotchMetrics Primary(double dpiScale) => FromScreen(WinScreen.PrimaryScreen!, dpiScale);
 
-    private static NotchMetrics FromScreen(Screen screen, double dpiScale)
+    private static NotchMetrics FromScreen(WinScreen screen, double dpiScale)
     {
         // Screen bounds arrive in physical pixels; WPF lays out in DIUs.
         var b = screen.Bounds;

@@ -19,6 +19,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- `UseWindowsForms` brings System.Windows.Forms and System.Drawing in as implicit
+         global usings across every file, where they collide head-on with WPF: Application,
+         Brush, Color, Point, Size, DragEventArgs and UserControl all exist in both, and
+         the first build failed with CS0104 on every one of them.
+
+         WinForms is here for a single type — Screen — so the global usings are dropped and
+         ScreenMetrics aliases what it needs. WPF's names then mean what they say
+         everywhere else, which for a WPF app is the right way round. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The Windows volume mixer is COM: IMMDeviceEnumerator, IAudioSessionManager2,
          ISimpleAudioVolume. Hand-written interop means hand-written vtables, and a
          vtable in the wrong order is a crash rather than a compile error — a poor bet
