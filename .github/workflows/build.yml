@@ -66,17 +66,22 @@ jobs:
           } else {
             "0.0.0+$($env:GITHUB_SHA.Substring(0,7))"
           }
+          $arch = '${{ matrix.rid }}' -replace '^win-', ''
           "version=$version" >> $env:GITHUB_OUTPUT
-          "zip=Slate-$version-windows-${{ matrix.rid }}.zip" >> $env:GITHUB_OUTPUT
+          "exe=Slate-$version-windows-$arch.exe" >> $env:GITHUB_OUTPUT
 
-      - name: Package
+      # Shipped as the bare .exe, not zipped. `PublishSingleFile` already produces one
+      # self-contained file, and wrapping it costs the person downloading it a step for
+      # nothing — the zip held exactly one entry. It is a large download in exchange:
+      # about 180MB, because the runtime is inside it and there is no .NET to install.
+      - name: Name the executable
         shell: pwsh
-        run: Compress-Archive -Path publish/${{ matrix.rid }}/* -DestinationPath ${{ steps.name.outputs.zip }}
+        run: Move-Item publish/${{ matrix.rid }}/Slate.exe ${{ steps.name.outputs.exe }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: Slate-${{ matrix.rid }}
-          path: ${{ steps.name.outputs.zip }}
+          path: ${{ steps.name.outputs.exe }}
           if-no-files-found: error
 
       # Only on a tag. A build of main is a compile check, not a download.
@@ -84,7 +89,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.name.outputs.zip }}
+          files: ${{ steps.name.outputs.exe }}
           draft: true
           body: |
             Built by CI on `windows-latest`. **Compiling is all that has been verified** —
