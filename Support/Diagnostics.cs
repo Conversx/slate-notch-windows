@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace Slate.Support;
 
 /// <summary>
